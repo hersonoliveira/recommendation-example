@@ -6,7 +6,7 @@ import org.apache.spark.sql.DataFrame
 
 object RecSystem extends App with RecWrapper {
 
-  val salesOrdersDf = buildSalesOrders("src/main/resources/PastWeaponSalesOrders.csv")
+  val salesOrdersDf = buildSalesOrders("sales/PastWeaponSalesOrders.csv")
   salesOrdersDf.show
   salesOrdersDf.printSchema
 
@@ -31,12 +31,18 @@ object RecSystem extends App with RecWrapper {
     15.0 /* Lambda, or regularization parameter */
   )
 
-  val weaponSalesLeadDf = buildSalesLeads("src/main/resources/WeaponSalesLeads.csv")
+  val weaponSalesLeadDf = buildSalesLeads("sales/WeaponSalesLeads.csv")
   println("Weapons Sales Lead dataframe is: ")
   weaponSalesLeadDf.show
 
   val customerWeaponsSystemPairDf: DataFrame = weaponSalesLeadDf.map(salesLead => ( salesLead.getInt(0), salesLead.getInt(2) )).toDF("user","item")
   println("The Customer-Weapons System dataframe as tuple pairs looks like: ")
   customerWeaponsSystemPairDf.show
+
+  val customerWeaponsSystemPairRDD: RDD[(Int, Int)] = customerWeaponsSystemPairDf.rdd.map(row => (row.getInt(0), row.getInt(1)))
+
+  val weaponRecs: RDD[Rating] = ratingsModel.predict(customerWeaponsSystemPairRDD).distinct()
+  println("Future ratings are: " + weaponRecs.foreach(rating => println("Customer: " + rating.user + " Product:  " + rating.product + " Rating: " + rating.rating)))
+
 
 }
